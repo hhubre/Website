@@ -1,0 +1,15 @@
+# common ignores
+.DS_Store
+Thumbs.db
+node_modules/
+dist/
+build/
+site/
+
+# python http.server logs / pycache
+__pycache__/
+*.pyc
+
+# IDEs
+.vscode/
+.idea/

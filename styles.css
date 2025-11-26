@@ -1,0 +1,33 @@
+:root{
+  --bg:#0f1724; /* dark navy */
+  --card:#0b1220;
+  --accent:#06b6d4; /* cyan */
+  --muted:#94a3b8;
+  --text:#e6eef6;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:Inter,Segoe UI,Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#071023 0%,#071728 100%);color:var(--text);line-height:1.45}
+.container{max-width:1000px;margin:0 auto;padding:28px}
+.site-header{border-bottom:1px solid rgba(255,255,255,0.04);}
+.site-header .container{display:flex;align-items:center;justify-content:space-between}
+.brand{font-weight:700;font-size:20px;letter-spacing:0.6px}
+.nav a{color:var(--muted);text-decoration:none;margin-left:18px}
+.nav a:hover{color:var(--text)}
+.hero{padding:64px 28px;text-align:center}
+.hero h2{font-size:32px;margin-bottom:8px}
+.hero p{color:var(--muted);max-width:740px;margin:0 auto 18px}
+.cta-row{display:flex;gap:12px;justify-content:center;margin-top:14px}
+.btn{background:var(--accent);color:#032029;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:700}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;padding:18px}
+.card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));border-radius:10px;padding:16px;color:var(--muted);min-height:120px}
+.about, .contact{padding:28px;margin-top:8px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent);border-radius:8px}
+.form{display:grid;gap:10px;max-width:600px}
+.form label{display:flex;flex-direction:column;color:var(--muted);font-size:14px}
+.form input,.form textarea{padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text)}
+.form textarea{min-height:90px;resize:vertical}
+.hint{color:var(--muted);font-size:13px;margin-top:8px}
+.site-footer{border-top:1px solid rgba(255,255,255,0.03);padding:12px 0;margin-top:24px;color:var(--muted);text-align:center}
+
+@media (max-width:640px){.site-header .container{padding:0 10px}.hero h2{font-size:22px}}

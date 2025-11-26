@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Mon site rapide — Bien fait</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1 class="brand">MonSite</h1>
+        <nav class="nav">
+          <a href="#features">Fonctionnalités</a>
+          <a href="#about">À propos</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero container">
+        <h2>Un site vite fait, propre et responsive</h2>
+        <p>Je t'ai préparé un modèle simple et moderne — modifie-le à ta guise !</p>
+        <div class="cta-row">
+          <a class="btn" href="#contact">Contact</a>
+          <a class="btn ghost" href="#about">En savoir plus</a>
+        </div>
+      </section>
+
+      <section id="features" class="container cards">
+        <article class="card">
+          <h3>Design responsive</h3>
+          <p>Adapté à mobiles et écrans larges sans configuration supplémentaire.</p>
+        </article>
+        <article class="card">
+          <h3>Performances</h3>
+          <p>Léger et rapide — pas de dépendances externes inutiles.</p>
+        </article>
+        <article class="card">
+          <h3>Facile à personnaliser</h3>
+          <p>Structure claire : modifie HTML, change les couleurs dans CSS.</p>
+        </article>
+      </section>
+
+      <section id="about" class="container about">
+        <h2>À propos</h2>
+        <p>Ce site est un squelette minimal pour démarrer rapidement un petit projet personnel ou portfolio.</p>
+      </section>
+
+      <section id="contact" class="container contact">
+        <h2>Contact</h2>
+        <form id="contactForm" class="form" onsubmit="return handleForm(event)">
+          <label>
+            Ton nom
+            <input type="text" name="name" placeholder="Jean" required>
+          </label>
+          <label>
+            Ton e‑mail
+            <input type="email" name="email" placeholder="moi@example.com" required>
+          </label>
+          <label>
+            Message
+            <textarea name="message" placeholder="Dis quelque chose de sympa..." required></textarea>
+          </label>
+          <button class="btn" type="submit">Envoyer</button>
+        </form>
+        <p class="hint">Le formulaire est un exemple — pour du vrai, connecte‑le à un backend.</p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">© 2025 — MonSite • Fait en deux minutes</div>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
