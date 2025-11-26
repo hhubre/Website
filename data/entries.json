@@ -1,0 +1,34 @@
+[
+  {
+    "id": "1",
+    "title": "TITRE1",
+    "subtitles": ["SOUS-TITRE1"],
+    "tags": ["tag1","tag2"],
+    "text": "Texte optionnel pour l'entrée 1. Exemple d'une petite description.",
+    "audio": "audio/5 Elementz - Searchin'.mp3"
+  },
+  {
+    "id": "2",
+    "title": "TITRE2",
+    "subtitles": ["SOUS-TITRE2"],
+    "tags": ["tag1","tag2","tag3"],
+    "text": "Description plus longue. Ceci est un exemple d'item avec texte et tags.",
+    "audio": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3"
+  },
+  {
+    "id": "3",
+    "title": "TITRE3",
+    "subtitles": ["SOUS-TITRE3"],
+    "tags": ["tag3"],
+    "text": "",
+    "audio": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3"
+  },
+  {
+    "id": "4",
+    "title": "TITRE4",
+    "subtitles": ["SOUS-TITRE4"],
+    "tags": ["tag1","tag4"],
+    "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ex: longue description.",
+    "audio": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3"
+  }
+]
