@@ -1,15 +1,37 @@
+---
+
+## 🔐 Admin UI — modifier les entrées & uploader des fichiers audio
+
+J'ai ajouté `admin.html` : c'est une interface simple qui te permet d'éditer, créer ou supprimer des entrées et, si tu le souhaites, d'uploader les fichiers audio directement dans le repo via l'API GitHub.
+
+Important — sécurité :
+- Pour autoriser l'upload & la mise à jour automatique, tu dois fournir un **Personal Access Token (PAT)** GitHub avec le scope `repo` (ou `public_repo` si repo public). Le PAT est utilisé uniquement dans le navigateur courant et **n'est pas stocké**.
+- Si tu exposes le PAT, révoque‑le immédiatement : https://github.com/settings/tokens
+
+Usage rapide :
+1. Ouvre `admin.html` localement (http://localhost:8000/admin.html) ou depuis le site déployé.
+2. Renseigne : GitHub owner (e.g. hhubre), repo (e.g. Website), branch (main), et ton PAT.
+3. Édite/ajoute des entrées. Pour l'audio, tu peux :
+	- entrer une URL publique (CDN) dans le champ audio, ou
+	- sélectionner un fichier local — il sera uploadé vers `audio/<filename>` dans le repo (via GitHub API) lorsque tu cliquera sur "Commit changes to GitHub".
+4. Clique sur "Commit changes to GitHub" pour envoyer `data/entries.json` et tous les fichiers audio ajoutés vers la branche spécifiée.
+
+Limitations / points importants :
+- La mise à jour automatique est faite via l'API GitHub et nécessite un PAT avec la permission d'écrire dans le repo. Le token est sensible. 
+- Les fichiers audio sont ajoutés au repo dans `audio/` — attention à la taille (éviter fichiers très lourds). GitHub limite la taille (≈100 MB par fichier).
+- Les fichiers audio sont ajoutés au repo dans `audio/` — attention à la taille (éviter fichiers très lourds). GitHub limite la taille (≈100 MB par fichier).
+- Note: the admin UI enforces a client-side upload limit of 25 MB per file; files larger than 25MB will be blocked (you can use external storage for big files).
+- Si tu préfères une solution server-side plus sécurisée (upload vers un stockage et une API serverless qui commit sans exposer PAT au navigateur), je peux t'aider à mettre ça en place (ex. serverless function + secrets dans Vercel).
+
 # Mon site vite fait
 
 Petit site statique minimal — prêt à modifier.
 
-Fichiers importants:
 - `index.html` — page principale
 - `styles.css` — styles principaux
 - `script.js` — peu d'interactivité (formulaire d'exemple)
 
 Pour lancer localement (PowerShell) :
-
-```powershell
 cd 'c:\Users\admin\Music\website'
 python -m http.server 8000
 # puis ouvrez http://localhost:8000 dans votre navigateur

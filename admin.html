@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Admin — Edit Entries</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      body{padding:20px;background:linear-gradient(180deg,#071423,#061424);color:var(--text)}
+      .container{max-width:980px;margin:0 auto}
+      h1{margin-bottom:10px}
+      input[type=text], textarea, select{width:100%;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:var(--text)}
+      label{display:block;margin-top:12px;color:var(--muted)}
+      .row{display:flex;gap:8px}
+      .col{flex:1}
+      .entry-card{border-radius:10px;padding:12px;margin-top:12px;background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent)}
+      .small{font-size:12px;color:var(--muted)}
+      .actions{display:flex;gap:8px;margin-top:8px}
+      button.btn{padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:#032029;font-weight:700}
+      button.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--text)}
+      .danger{background:#b91c1c;color:white}
+      .notice{margin-top:8px;color:var(--muted);font-size:13px}
+      .config{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+      .help{margin-top:8px;background:rgba(255,255,255,0.01);padding:8px;border-radius:8px;color:var(--muted)}
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Admin — Manage entries</h1>
+      <p class="small">This admin UI helps edit entries and (optionally) upload audio files directly into the GitHub repo. Requires a GitHub personal access token (repo scope).</p>
+
+      <div class="entry-card">
+        <h3>Repository / Authentication</h3>
+        <div class="config">
+          <label>GitHub owner (user or org)
+            <input id="ghOwner" placeholder="hhubre" value="hhubre">
+          </label>
+          <label>Repository name
+            <input id="ghRepo" placeholder="Website" value="Website">
+          </label>
+        </div>
+
+        <label>Branch (default: main)
+          <input id="ghBranch" placeholder="main" value="main">
+        </label>
+
+        <label class="small">Personal access token (keep secret!)
+          <input id="ghToken" type="password" placeholder="ghp_xxx..." />
+        </label>
+
+        <div class="help">Notes: if you provide a token, the admin UI will attempt to upload audio files to <code>audio/</code> and update <code>data/entries.json</code> in the repo using GitHub Contents API. No token is stored — it's used only for the current browser session.</div>
+      </div>
+
+      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div style="flex:1"><input id="searchAdmin" placeholder="Search entries by title/subtitle/tag"/></div>
+        <div style="width:220px;display:flex;gap:8px">
+          <button class="btn" id="newEntry">+ New entry</button>
+          <button class="ghost" id="refresh">Reload</button>
+        </div>
+      </div>
+
+      <div id="entriesArea"></div>
+
+      <h3 style="margin-top:20px">Batch actions</h3>
+      <p class="small">When you're ready, you can commit your local changes to GitHub. If you have local audio files selected, they will be uploaded into <code>audio/</code> and `data/entries.json` will be updated.</p>
+      <div class="actions">
+        <button class="btn" id="commitBtn">Commit changes to GitHub (requires token)</button>
+        <button class="ghost" id="downloadBtn">Download updated entries.json</button>
+      </div>
+
+      <div class="notice" id="notice"></div>
+    </div>
+
+    <script>
+      // Admin UI script
+      const dataUrl = 'data/entries.json'
+      let entries = []
+      let staged = new Map() // id -> object state and possibly file
+
+      function setNotice(msg,err=false){ const n=document.getElementById('notice'); n.style.color = err? '#fca5a5':'#9ee7f6'; n.textContent = msg }
+
+      const MAX_UPLOAD_BYTES = 25 * 1024 * 1024 // 25 MB
+
+      async function loadEntries(){
+        const r = await fetch(dataUrl+'?t='+Date.now())
+        entries = await r.json()
+        staged.clear()
+        entries.forEach(e=> staged.set(e.id, {...e, __audioFile:null}))
+        renderList()
+        setNotice('Loaded '+entries.length+' entries')
+      }
+
+      function renderList(){
+        const q = document.getElementById('searchAdmin').value.trim().toLowerCase()
+        const area = document.getElementById('entriesArea')
+        const arr = Array.from(staged.values()).filter(e=>{
+          if (!q) return true
+          const hay = (e.title + ' ' + (e.subtitles||[]).join(' ') + ' ' + (e.tags||[]).join(' ') + ' ' + (e.text||'')).toLowerCase()
+          return hay.includes(q)
+        })
+        area.innerHTML = arr.map(e=>entryForm(e)).join('\n')
+        // attach handlers for file inputs
+        document.querySelectorAll('.audio-file-input').forEach(inp=>{
+          inp.onchange = (ev)=>{
+            const id = inp.dataset.id
+            const f = ev.target.files[0]
+            // enforce max upload size
+            if (f && f.size > MAX_UPLOAD_BYTES) {
+              setNotice(`File too large: ${Math.round(f.size/1024/1024)}MB — max 25MB`, true)
+              inp.value = ''
+              const item = staged.get(id) || {id}
+              item.__audioFile = null
+              staged.set(id,item)
+              return
+            }
+            const item = staged.get(id) || {id}
+            item.__audioFile = f
+            staged.set(id,item)
+            setNotice('Selected audio for '+id+' -> '+(f?f.name:'none'))
+          }
+        })
+        document.querySelectorAll('.save-btn').forEach(b=>b.onclick = (e)=>{ const id = b.dataset.id; saveEntryForm(id) })
+        document.querySelectorAll('.delete-btn').forEach(b=>b.onclick = (e)=>{ const id = b.dataset.id; deleteEntry(id) })
+      }
+
+      function entryForm(e){
+        const id = e.id
+        return `
+          <div class="entry-card">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong>ID: ${escapeHtml(id)} — <input data-id="${id}" class="inline-title" value="${escapeHtml(e.title || '')}" onchange="onFieldChange('${id}','title',this.value)" /></strong>
+              <div class="small">Audio: ${e.audio?escapeHtml(e.audio):'(none)'}</div>
+            </div>
+            <label>Subtitles (comma separated)
+              <input type="text" onchange="onFieldChange('${id}','subtitles',this.value)" value="${escapeHtml((e.subtitles||[]).join(', '))}" />
+            </label>
+            <label>Tags (comma separated)
+              <input type="text" onchange="onFieldChange('${id}','tags',this.value)" value="${escapeHtml((e.tags||[]).join(', '))}" />
+            </label>
+            <label>Text (optional)
+              <textarea onchange="onFieldChange('${id}','text',this.value)">${escapeHtml(e.text||'')}</textarea>
+            </label>
+            <label>Audio file (or leave blank to use url):
+              <input type="file" accept="audio/*" class="audio-file-input" data-id="${id}" />
+            </label>
+            <label>Or audio URL
+              <input type="text" onchange="onFieldChange('${id}','audio',this.value)" value="${escapeHtml(e.audio||'')}" />
+            </label>
+            <div class="actions">
+              <button class="btn save-btn" data-id="${id}">Save</button>
+              <button class="danger ghost delete-btn" data-id="${id}">Delete</button>
+            </div>
+          </div>
+        `
+      }
+
+      function escapeHtml(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+      function onFieldChange(id,field,value){
+        const item = staged.get(id) || {id}
+        if(field==='subtitles') item.subtitles = value.split(',').map(s=>s.trim()).filter(Boolean)
+        else if(field==='tags') item.tags = value.split(',').map(s=>s.trim()).filter(Boolean)
+        else item[field] = value
+        staged.set(id,item)
+      }
+
+      async function saveEntryForm(id){
+        // validate required fields
+        const entry = staged.get(id)
+        if(!entry.title || !entry.subtitles || entry.subtitles.length===0 || !entry.tags || entry.tags.length===0){
+          setNotice('Entry requires title, at least one subtitle and one tag',true); return
+        }
+        // update in entries array
+        const idx = entries.findIndex(x=>x.id===id)
+        const payload = { id: entry.id, title: entry.title, subtitles: entry.subtitles, tags: entry.tags, text: entry.text || '', audio: entry.audio || '' }
+        if(idx>=0) entries[idx] = payload; else entries.push(payload)
+        staged.set(id, {...payload, __audioFile: entry.__audioFile})
+        renderList()
+        setNotice('Saved locally — not yet committed to repo (use Commit changes)')
+      }
+
+      function deleteEntry(id){ if(!confirm('Delete entry '+id+'?')) return; entries = entries.filter(e=>e.id!==id); staged.delete(id); renderList(); setNotice('Deleted locally — commit to apply on repo') }
+
+      document.getElementById('newEntry').onclick = ()=>{
+        // create new unique id
+        const next = String(Math.floor(Math.random()*900000)+100000)
+        const obj = { id: next, title: 'New title', subtitles: ['subtitle'], tags: ['tag'], text: '', audio: '' }
+        entries.unshift(obj); staged.set(obj.id, {...obj,__audioFile:null}); renderList(); setNotice('Created new entry '+obj.id)
+      }
+
+      document.getElementById('refresh').onclick = loadEntries
+
+      document.getElementById('downloadBtn').onclick = ()=>{
+        const data = JSON.stringify(entries, null, 2)
+        const blob = new Blob([data], {type:'application/json'})
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a'); a.href=url; a.download='entries.json'; a.click(); URL.revokeObjectURL(url)
+      }
+
+      // GitHub API helpers (simple) — only used if user provides token
+      async function ghPutFile(path,contentB64, message, token, branch, sha){
+        const owner = document.getElementById('ghOwner').value.trim()
+        const repo = document.getElementById('ghRepo').value.trim()
+        const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`
+        const body = { message, content: contentB64, branch }
+        if(sha) body.sha = sha
+        const r = await fetch(url, { method:'PUT', headers: { Authorization: 'token '+token, 'Accept': 'application/vnd.github.v3+json' }, body: JSON.stringify(body) })
+        return r.json()
+      }
+
+      async function ghGetFileSha(path, token, branch){
+        const owner = document.getElementById('ghOwner').value.trim()
+        const repo = document.getElementById('ghRepo').value.trim()
+        const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${branch}`
+        const r = await fetch(url, { headers: { Authorization: 'token '+token, 'Accept': 'application/vnd.github.v3+json' } })
+        if(r.status===404) return null
+        const json = await r.json(); return json.sha
+      }
+
+      async function commitChangesToGitHub(){
+        const token = document.getElementById('ghToken').value.trim(); if(!token){ setNotice('Provide a GitHub token (repo scope) before committing',true); return }
+        const owner = document.getElementById('ghOwner').value.trim(); const repo = document.getElementById('ghRepo').value.trim(); const branch = document.getElementById('ghBranch').value.trim()||'main'
+        setNotice('Preparing commit…')
+
+        // 1) upload any audio files selected
+        for(const [id, item] of staged){
+          if(item.__audioFile){
+            // safety double-check file size
+            const file = item.__audioFile
+            if (file.size > MAX_UPLOAD_BYTES) {
+              setNotice(`Upload blocked: ${file.name} is ${Math.round(file.size/1024/1024)}MB (max 25MB)`, true)
+              return
+            }
+            const file = item.__audioFile
+            const path = `audio/${file.name}`
+            setNotice('Uploading audio: '+file.name)
+            const buf = await file.arrayBuffer();
+            const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)))
+            // check if exists to provide sha to update
+            const existingSha = await ghGetFileSha(path, token, branch)
+            const res = await ghPutFile(path, b64, `Add audio ${file.name}`, token, branch, existingSha)
+            if(res.content && res.content.path) {
+              // set entry audio url to raw URL via GitHub
+              // raw URL to use in site is https://raw.githubusercontent.com/owner/repo/branch/audio/filename
+              const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`
+              item.audio = rawUrl
+              setNotice('Uploaded audio and set audio URL for entry '+id)
+            } else {
+              setNotice('Audio upload failed for '+file.name,true); console.error(res); return
+            }
+          }
+        }
+
+        // 2) update entries.json
+        setNotice('Updating data/entries.json in repo…')
+        const path = 'data/entries.json'
+        const currentSha = await ghGetFileSha(path, token, branch)
+        const dataB64 = btoa(unescape(encodeURIComponent(JSON.stringify(entries, null, 2))))
+        const res = await ghPutFile(path, dataB64, 'Update entries.json via admin UI', token, branch, currentSha)
+        if(res.content) {
+          setNotice('Committed changes to repository — success ✅')
+          // reload
+          loadEntries()
+        } else {
+          setNotice('Commit failed — check console for details',true); console.error(res)
+        }
+      }
+
+      document.getElementById('commitBtn').onclick = commitChangesToGitHub
+
+      // initial load
+      loadEntries()
+    </script>
+  </body>
+</html>

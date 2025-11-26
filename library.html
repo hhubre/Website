@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Library — Audio Database</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+      /* small self-contained styles for the library page */
+      .library-header{padding:28px;text-align:center}
+      .controls{display:flex;gap:12px;justify-content:center;margin-bottom:12px}
+      .accordion{max-width:980px;margin:18px auto;padding:6px}
+      .entry{border:2px solid rgba(0,0,0,0.25);border-radius:16px;padding:14px;margin-bottom:14px;background:linear-gradient(180deg,rgba(255,255,255,0.01),transparent)}
+      .entry .head{display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+      .entry .title{font-size:22px;font-weight:700}
+      .entry .chev{font-size:20px;color:var(--muted)}
+      .entry .meta{margin-top:10px;color:var(--muted);font-size:14px}
+      .entry .player{margin-top:12px}
+      .entry .text{margin-top:12px;color:var(--muted)}
+      .hidden{display:none}
+      .tags{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+      .tag{background:rgba(255,255,255,0.03);padding:6px 10px;border-radius:999px;font-size:13px;color:var(--muted)}
+      .pager{display:flex;justify-content:center;gap:8px;margin:18px 0;color:var(--muted)}
+      .btn-page{padding:6px 10px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:transparent;color:var(--text);cursor:pointer}
+      .btn-page.active{background:var(--accent);color:#032029}
+      .search{padding:8px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);width:320px}
+      @media (max-width:640px){.entry .title{font-size:18px}}
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container">
+        <h1 class="brand">AudioDB</h1>
+        <nav class="nav">
+          <a href="index.html">Accueil</a>
+          <a href="library.html">Library</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <section class="container library-header">
+        <h2>Library — Browse audio entries</h2>
+        <div class="controls">
+          <input id="q" class="search" placeholder="Search title, subtitle or tags" />
+          <select id="perPage" class="search">
+            <option value="4">4 / page</option>
+            <option value="8">8 / page</option>
+            <option value="12">12 / page</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="container accordion" id="entries"></section>
+
+      <div class="container pager" id="pager"></div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">© 2025 — AudioDB</div>
+    </footer>
+
+    <script>
+      // small helper client to fetch entries and render accordion + audio players
+      const api = 'data/entries.json'
+      let entries = []
+      let page = 1
+      let perPage = 4
+
+      async function load(){
+        const r = await fetch(api)
+        entries = await r.json()
+        render()
+      }
+
+      function render(){
+        const q = document.getElementById('q').value.trim().toLowerCase()
+        perPage = parseInt(document.getElementById('perPage').value,10)
+        const filtered = entries.filter(e=>{
+          if (!q) return true
+          const hay = (e.title + ' ' + e.subtitles.join(' ') + ' ' + e.tags.join(' ')+ ' ' + (e.text||'')).toLowerCase()
+          return hay.includes(q)
+        })
+        const total = filtered.length
+        const pages = Math.max(1, Math.ceil(total/perPage))
+        if (page>pages) page = pages
+        const start = (page-1)*perPage
+        const pageItems = filtered.slice(start,start+perPage)
+
+        const container = document.getElementById('entries')
+        container.innerHTML = pageItems.map(item=>{
+          return `
+            <article class="entry" data-id="${item.id}">
+              <div class="head" onclick="toggle(this)">
+                <div class="title">${escapeHtml(item.title)}</div>
+                <div class="chev">▾</div>
+              </div>
+              <div class="body hidden">
+                <div class="meta"><strong>${escapeHtml(item.subtitles[0])}</strong></div>
+                <div class="tags">${item.tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>
+                <div class="player"><audio controls preload="none" src="${escapeHtml(item.audio)}"></audio></div>
+                ${item.text?`<div class="text">${escapeHtml(item.text)}</div>`:''}
+              </div>
+            </article>`
+        }).join('')
+
+        // pager
+        const pager = document.getElementById('pager')
+        pager.innerHTML = renderPager(pages)
+      }
+
+      // helper
+      function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
+
+      function toggle(el){
+        const article = el.parentElement
+        const body = article.querySelector('.body')
+        const chev = el.querySelector('.chev')
+        const open = !body.classList.contains('hidden')
+        // close others
+        document.querySelectorAll('.entry .body').forEach(b=>b.classList.add('hidden'))
+        document.querySelectorAll('.entry .chev').forEach(c=>c.textContent='▾')
+        if(open){
+          body.classList.add('hidden'); chev.textContent='▾'
+        } else {
+          body.classList.remove('hidden'); chev.textContent='▴'
+        }
+      }
+
+      function renderPager(pages){
+        const arr = []
+        for(let i=1;i<=pages;i++){
+          arr.push(`<button class="btn-page ${i===page? 'active':''}" onclick="goto(${i})">${i}</button>`)
+        }
+        return arr.join('')
+      }
+
+      function goto(n){ page = n; render(); window.scrollTo({top:60,behavior:'smooth'}) }
+
+      document.getElementById('q').addEventListener('input',()=>{ page = 1; render() })
+      document.getElementById('perPage').addEventListener('change',()=>{ page = 1; render() })
+
+      load()
+    </script>
+  </body>
+</html>
